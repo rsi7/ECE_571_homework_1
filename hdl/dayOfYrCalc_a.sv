@@ -33,12 +33,12 @@ module dayOfYrCalc_a (
 	/* Global Assignments											  */
 	/******************************************************************/	
 
-	assign 	month_t = (month + 9) % 12;
+	assign month_t = (month + 9) % 12;
 
 	/******************************************************************/
 	/* dayOfYear generator block									  */
 	/******************************************************************/
 
-	assign dayOfYear = (((month_t * 306) + 5)/10) + (dayOfMonth-1);
+	assign dayOfYear = ((((((month_t * 306) + 5)/10) + (dayOfMonth-1))+59) % 365);
 
 endmodule
