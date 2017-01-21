@@ -27,18 +27,35 @@ module dayOfYrCalc_a (
 	/* Local parameters and variables								  */
 	/******************************************************************/
 
-	wire			[3:0]	month_t;
-
-	/******************************************************************/
-	/* Global Assignments											  */
-	/******************************************************************/	
-
-	assign month_t = (month + 9) % 12;
+	reg 			[8:0] 	temp_sum;
 
 	/******************************************************************/
 	/* dayOfYear generator block									  */
 	/******************************************************************/
 
-	assign dayOfYear = ((((((month_t * 306) + 5)/10) + (dayOfMonth-1))+59) % 365);
+	always@(dayOfMonth or month) begin
+
+		temp_sum = 0;
+
+			case(month)
+				4'd1 : temp_sum = 0;		// Jan (+0)
+				4'd2 : temp_sum = 31;		// Feb (+31)
+				4'd3 : temp_sum = 59;		// March (+28)
+				4'd4 : temp_sum = 90;		// April (+31)
+				4'd5 : temp_sum = 120;		// May (+30)
+				4'd6 : temp_sum = 151;		// June (+31)
+				4'd7 : temp_sum = 181;		// July (+30)
+				4'd8 : temp_sum = 212;		// August (+31)
+				4'd9 : temp_sum = 243;		// September (+31)
+				4'd10 : temp_sum = 273;		// October (+30)
+				4'd11 : temp_sum = 304;		// November (+31)
+				4'd12 : temp_sum = 334;		// December (+30)
+				default: temp_sum = 0;		// handle months 13-16
+			endcase
+
+		temp_sum += dayOfMonth;
+		dayOfYear = temp_sum;
+
+	end
 
 endmodule

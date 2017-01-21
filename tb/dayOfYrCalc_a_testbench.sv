@@ -8,9 +8,13 @@ module dayOfYrCalc_a_testbench;
 
 	localparam CLK_PERIOD = 1;
 
-	logic 	[5:0] 	dayOfMonth_tester 	= '0;
-	logic 	[3:0]	month_tester 		= '0;
-	logic 	[8:0] 	dayOfYear_tester 	= '0;
+	logic 	[5:0] 	dayOfMonth_tester 		= '0;
+	logic 	[3:0]	month_tester 			= '0;
+	logic 	[8:0] 	dayOfYear_tester 		= '0;
+
+	int 			month_range[12]			= '{31,28,31,30,31,30,31,31,30,31,30,31};
+	int 			d 						= 0;
+	int 			m 						= 0;
 
 	/******************************************************************/
 	/* Instantiating the DUT										  */
@@ -30,16 +34,22 @@ module dayOfYrCalc_a_testbench;
 
 	always begin
 		#(CLK_PERIOD * 30)
-		for (int m = 1; m <= 12; m++) begin
-			#(CLK_PERIOD * 5) month_tester <= 12'(m);
-			for (int d = 1; d <= 30; d++) begin
-				#(CLK_PERIOD) dayOfMonth_tester <= 6'(d);
+
+		for (m = 0; m <= 11; m++) begin
+
+			#(CLK_PERIOD * 5)
+			dayOfMonth_tester <= 1;
+			month_tester <= (4'(m))+1;
+
+			for (d = 1; d <= month_range[m]; d++) begin
+				#(CLK_PERIOD) dayOfMonth_tester = 6'(d);
 			end
+
 		end
 	end
 
 	initial begin
-		$monitor($stime,, month_tester ,, dayOfMonth_tester ,, dayOfYear_tester);
+		$monitor("Time: ", $stime , "\t\t\tMonth: ", month_tester, "\t\t\tDay of Month: ", dayOfMonth_tester, "\t\t\tCalculated Day of Year: ", dayOfYear_tester);
     end 
 
 endmodule
