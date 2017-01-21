@@ -12,9 +12,9 @@
 //
 ///////////////////////////////////////////////////////////////////////////////
 
-`timescale 1ns / 1ns
-
 module dayOfYrCalc_c_testbench;
+
+	timeunit 1ns;
 
 	/*************************************************************************/
 	/* Top-level port declarations											 */
@@ -22,30 +22,33 @@ module dayOfYrCalc_c_testbench;
 
 	localparam CLK_PERIOD = 1;
 
-	logic 	[5:0] 	dayOfMonth_tester 		= '0;
-	logic 	[3:0]	month_tester 			= '0;
-	logic 	[8:0] 	dayOfYear_tester 		= '0;
-	logic 	[10:0] 	year_tester 			= '0;
+	logic 	[5:0] 	dayOfMonth_tester 		= '0;		// dayOfMonth to send to DUT
+	logic 	[3:0]	month_tester 			= '0;		// month to send to DUT
+	logic 	[8:0] 	dayOfYear_tester 		= '0;		// dayOfYear to send to DUT
+	logic 	[10:0] 	year_tester 			= '0;		// year to send to DUT
 
-	int 			month_range[12]			= '{31,28,31,30,31,30,31,31,30,31,30,31};
-	int 			d 						= 0;
-	int 			m 						= 0;
-	int 			y 						= 0;
+	int unsigned 	month_range[12]			= '{31,28,31,30,31,30,31,31,30,31,30,31};
+	int unsigned 	y 						= 0;
 
-	wire 			divby4;
-	wire 			divby100;
-	wire 			divby400;
-	wire 			leap_tester;
+	int 			fhandle;				// integer to hold file location
+
+	int 			month_seed;				// integer value to hold random month
+	int 			day_seed;				// integer value to hold random day
+
+	wire 			divby4;					// flag indicating divisibility by 4
+	wire 			divby100; 				// flag indicating divisibility by 100
+	wire 			divby400; 				// flag indicating divisibility by 400
+	wire 			leap_tester;  			// flag indicating leap year status
 
 	/*************************************************************************/
 	/* Global Assignments													 */
 	/*************************************************************************/	
 
-	assign divby4 = (y[1:0] == 2'b00) ? 1'b1 : 1'b0;
-	assign divby100 = ((y % 100) == 0) ? 1'b1 : 1'b0;
-	assign divby400 = ((y % 400) == 0) ? 1'b1 : 1'b0;
+	assign divby4 = (y[1:0] == 2'b00) ? 1'b1 : 1'b0; 				// is year divisible by 4?
+	assign divby100 = ((y % 100) == 0) ? 1'b1 : 1'b0; 				// is year divisible by 100?
+	assign divby400 = ((y % 400) == 0) ? 1'b1 : 1'b0;				// is year divisible by 400?
 
-	assign leap_tester = (((divby4) && (divby400 || !divby100)));
+	assign leap_tester = (((divby4) && (divby400 || !divby100))); 	// determine leap year status
 
 	/*************************************************************************/
 	/* Instantiating the DUT 												 */
@@ -64,15 +67,28 @@ module dayOfYrCalc_c_testbench;
 	/* Running the testbench simluation										 */
 	/*************************************************************************/
 
-	always begin
+	// format time units for printing later
+	// also setup the output file location
 
-		for (y = 0; y < 2048; y=y+100) begin
+	initial begin
+		$timeformat(-9, 0, "ns", 8);
+		fhandle = $fopen("C:/Users/riqbal/Desktop/dayOfYrCalc_c_results.txt");
+	end
 
-			#(CLK_PERIOD * 30)
-			year_tester <= 11'(y);
-			month_tester <= 1;
-			dayOfMonth_tester <= 1;
+	// main simulation loop
 
+	initial begin
+
+		for (y = 0; y < 2048; y++) begin
+
+			#30ns
+			year_tester = 11'(y);
+			month_tester = 4'd1;
+			dayOfMonth_tester = 6'd1;
+
+			// check for leap year...
+			// if so, need to generate between 1 - 29 for Feb
+			
 			if (leap_tester) begin
 				month_range[1] = 29;
 			end
@@ -80,22 +96,23 @@ module dayOfYrCalc_c_testbench;
 				month_range[1] = 28;
 			end
 
-			for (m = 0; m <= 11; m++) begin
+			// bound random generation of month & day
+			month_seed = $urandom_range(32'd11, 32'd0);
+			day_seed = $urandom_range(month_range[month_seed], 32'd1);
 
-				#(CLK_PERIOD * 5)
-				month_tester <= (4'(m)) + 1;
-				dayOfMonth_tester <= 1;
+			// send to DUT inputs
+			month_tester = (4'(month_seed)) + 1;
+			dayOfMonth_tester = 6'(day_seed);
 
-				for (d = 1; d <= month_range[m]; d++) begin
-					#(CLK_PERIOD) dayOfMonth_tester = 6'(d);
-				end
+			// print results to file
+			$fmonitor(fhandle, "Time:\t%t\t\tYear: %d\t\tMonth: %d\t\tDay of Month: %d\t\tDay of Year: %d\t", $time, year_tester, month_tester, dayOfMonth_tester, dayOfYear_tester);
 
-			end
 		end
-	end
 
-	initial begin
-		$monitor("Time: ", $stime , "\t\t\tYear: ", year_tester, "\t\t\tMonth: ", month_tester, "\t\t\tDay of Month: ", dayOfMonth_tester, "\t\t\tCalculated Day of Year: ", dayOfYear_tester);
-    end 
+		// wrap up file writing & finish simulation
+		$fwrite(fhandle, "\n\nEND OF FILE");
+		$fclose(fhandle);
+		$stop;
+	end
 
 endmodule
