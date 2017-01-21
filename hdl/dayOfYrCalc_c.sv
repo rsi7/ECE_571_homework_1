@@ -1,16 +1,17 @@
-// Module: dayOfYrCalc_a.sv
+// Module: dayOfYrCalc_c.sv
 // Author: Rehan Iqbal
 // Date: January 20, 2017
 // Company: Portland State University
-
+//
 // Description:
 // ------------
-// Given the month (1-12) and day of month (1-31) it will return the day number 
-// of the year (1-365). It does not consider the year (leap or otherwise).
+// Given the month (1-12), year (0-2047), and day of month (1-31) it will
+// return the day number of the year (1-366). It correctly accounts for
+// leap years and considers 100-year & 400-year special cases.
 //
 ///////////////////////////////////////////////////////////////////////////////
 
-module dayOfYrCalc_a (
+module dayOfYrCalc_c (
 
 	/*************************************************************************/
 	/* Top-level port declarations											 */
@@ -18,6 +19,7 @@ module dayOfYrCalc_a (
 
 	input	logic	[5:0]	dayOfMonth,		// range is 1..31
 	input	logic	[3:0]	month,			// range is 1..12
+	input	logic	[10:0]	year,			// range is 0000..2047
 
 	output	logic	[8:0]	dayOfYear		// range is 1..366
 
@@ -28,6 +30,24 @@ module dayOfYrCalc_a (
 	/*************************************************************************/
 
 	reg 			[8:0] 	temp_sum;		// stores dayOfMonth calculations
+
+	wire 					divby4;			// flag indicating divisibility by 4
+	wire 					divby100;		// flag indicating divisibility by 100
+	wire 					divby400;		// flag indicating divisibility by 400
+
+	wire 					isLeapYear;		// flag indicating leap year status
+	wire 					afterFeb29;		// flag indicating date is after Feb. 29th
+
+	/*************************************************************************/
+	/* Global Assignments													 */
+	/*************************************************************************/
+
+	assign divby4 = (year[1:0] == 2'b00) ? 1'b1 : 1'b0; 			// is year divisible by 4?
+	assign divby100 = ((year % 100) == 0) ? 1'b1 : 1'b0;			// is year divisible by 100?
+	assign divby400 = ((year % 400) == 0) ? 1'b1 : 1'b0;			// is year divisible by 400?
+
+	assign isLeapYear = (((divby4) && (divby400 || !divby100)));	// determine leap year status
+	assign afterFeb29 = (month > 2) ? 1'b1 : 1'b0;					// is month after Feb?
 
 	/*************************************************************************/
 	/* dayOfYear generator block											 */
@@ -55,6 +75,9 @@ module dayOfYrCalc_a (
 
 		// increment the dayOfMonth calculation
 		temp_sum += dayOfMonth;
+
+		// add another day if it's a leap year & after Feb. 29th
+		temp_sum = (isLeapYear && afterFeb29) ? (temp_sum + 1) : (temp_sum);
 
 		// store results into output
 		dayOfYear = temp_sum;
